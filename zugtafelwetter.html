@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<title>Zugtafel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    overscroll-behavior: none;
+    touch-action: pan-x pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background: #000000;
+    color: #ffb000;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    padding: 20px 64px;
+    padding-left: max(64px, env(safe-area-inset-left) + 64px);
+    padding-right: max(64px, env(safe-area-inset-right) + 64px);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+    text-shadow: 0 0 6px rgba(255, 176, 0, 0.55);
+    position: relative;
+    overflow-x: hidden;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* Feines Scanline-Raster über der ganzen Seite - typisch für LED/LCD-Displays */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.025) 0px,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* --- Stationen --- */
+  .station-block {
+    margin-bottom: 22px;
+  }
+
+  .station-block h2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #b37a00;
+    margin: 0 0 4px 0;
+    text-transform: uppercase;
+  }
+
+  .station-block h2 .uhr {
+    color: #ffb000;
+    font-weight: 400;
+  }
+
+  .zeilen {
+    border-top: 1px solid #3a2600;
+  }
+
+  .zeile {
+    display: grid;
+    grid-template-columns: 4em 1fr 3em 5.5em;
+    align-items: baseline;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #3a2600;
+    font-size: clamp(1.4em, 5.6vw, 2.6em);
+    text-transform: uppercase;
+  }
+
+  .zeile .linie {
+    font-weight: 700;
+  }
+
+  .zeile .ziel {
+    font-weight: 400;
+    color: #ffb000;
+  }
+
+  .zeile .gleis {
+    font-weight: 400;
+    color: #b37a00;
+    text-align: right;
+  }
+
+  .zeile .gleis.geaendert {
+    color: #ff3b30;
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(255, 59, 48, 0.8);
+  }
+
+  .zeile .zeit {
+    text-align: right;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .zeile.nicht-erreichbar {
+    opacity: 0.32;
+  }
+
+  .zeile .hinweis {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.55em;
+    font-weight: 400;
+    color: #b37a00;
+  }
+
+  .zeile .zeit .verspaetet {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.5em;
+    font-weight: 700;
+    color: #ff3b30;
+    text-shadow: 0 0 8px rgba(255, 59, 48, 0.8);
+    animation: verspaetungPuls 1.6s ease-in-out infinite;
+  }
+
+  @keyframes verspaetungPuls {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+
+  .fehler {
+    padding: 18px 0;
+    color: #7a5400;
+    font-size: 1.1em;
+    font-weight: 300;
+  }
+
+  /* --- Split-Flap / Fallblattanzeige: einzelne "Blätter" pro Zeichen --- */
+  .flap-feld {
+    display: inline-flex;
+    perspective: 240px;
+    vertical-align: bottom;
+    overflow: hidden;
+  }
+
+  .flap-char {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.64em;
+    margin-right: 1px;
+    flex-shrink: 0;
+    background: #171006;
+    box-shadow: inset 0 0 0 1px rgba(255, 176, 0, 0.06);
+  }
+
+  /* Die feine Mittellinie, die eine echte Klapp-Karte in zwei Hälften teilt */
+  .flap-char::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.75);
+  }
+
+  @keyframes flapFlip {
+    0%   { transform: rotateX(0deg); }
+    48%  { transform: rotateX(-92deg); }
+    52%  { transform: rotateX(-92deg); }
+    100% { transform: rotateX(0deg); }
+  }
+
+  .flap-char.dreht {
+    animation: flapFlip var(--flap-dauer, 0.22s) ease-in-out;
+  }
+
+  /* --- Ansichten-Umschaltung (Zugtafel <-> Wetter) --- */
+  .ansicht {
+    display: none;
+  }
+
+  .ansicht.aktiv {
+    display: block;
+  }
+
+  /* --- Wetteransicht --- */
+  #ansicht-wetter {
+    display: none;
+  }
+
+  #ansicht-wetter.aktiv {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .wetter-kopf {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px solid #3a2600;
+    padding-bottom: 10px;
+  }
+
+  .wetter-kopf h2 {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #b37a00;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  .wetter-hauptwert {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .wetter-temperatur {
+    font-size: clamp(2.2em, 9vw, 4.5em);
+    font-weight: 700;
+  }
+
+  .wetter-beschreibung {
+    font-size: clamp(1em, 3vw, 1.6em);
+    color: #ffb000;
+    text-transform: uppercase;
+  }
+
+  .wetter-details {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    font-size: clamp(0.85em, 2.4vw, 1.2em);
+    color: #b37a00;
+  }
+
+  .wetter-details span.wert {
+    color: #ffb000;
+    font-weight: 600;
+  }
+
+  .radar-box {
+    border: 1px solid #3a2600;
+    padding: 10px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .radar-box .radar-titel {
+    font-size: 0.75em;
+    color: #b37a00;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+  }
+
+  .regen-leiste {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 140px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #3a2600;
+  }
+
+  .regen-balken-spalte {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .regen-balken {
+    width: 100%;
+    min-height: 3px;
+    background: linear-gradient(to top, #7a5400, #ffb000);
+    box-shadow: 0 0 6px rgba(255, 176, 0, 0.3);
+  }
+
+  .regen-balken.kein-regen {
+    background: #241a05;
+    box-shadow: none;
+  }
+
+  .regen-temperaturen {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .regen-temperaturen div {
+    flex: 1;
+    text-align: center;
+    font-size: 0.65em;
+    font-weight: 700;
+    color: #ffb000;
+  }
+
+  .regen-zeiten {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .regen-zeiten div {
+    flex: 1;
+    text-align: center;
+    font-size: 0.55em;
+    color: #b37a00;
+  }
+
+  .regen-mengen {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .regen-mengen div {
+    flex: 1;
+    text-align: center;
+    font-size: 0.5em;
+    color: #7a5400;
+  }
+
+  @media (orientation: landscape) and (max-height: 600px) {
+    #ansicht-wetter.aktiv {
+      flex-direction: row;
+      gap: 40px;
+    }
+
+    .wetter-textspalte {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      justify-content: flex-start;
+    }
+
+    .radar-box {
+      flex: 1.3;
+    }
+  }
+  @media (orientation: landscape) and (max-height: 600px) {
+    body {
+      padding-top: 14px;
+      padding-bottom: 14px;
+      padding-left: max(90px, env(safe-area-inset-left) + 90px);
+      padding-right: max(90px, env(safe-area-inset-right) + 90px);
+    }
+
+    .stationen {
+      display: flex;
+      gap: 48px;
+      align-items: flex-start;
+    }
+
+    .station-block {
+      flex: 1;
+      min-width: 0;
+      margin-bottom: 0;
+    }
+
+    .zeile {
+      /* Höhe statt Breite als Bezugsgrösse - das bleibt über verschiedene
+         Handymodelle hinweg deutlich konsistenter, da sie bestimmt, wie
+         viele Zeilen tatsächlich reinpassen. */
+      font-size: clamp(1.05em, 10vh, 1.7em);
+      padding: 8px 0;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="ansicht aktiv" id="ansicht-zug">
+    <div class="stationen">
+      <div class="station-block">
+        <h2>Baden <span class="uhr flap-feld" id="uhr"></span></h2>
+        <div class="zeilen" id="tabelle-baden"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ansicht" id="ansicht-wetter">
+    <div class="wetter-textspalte">
+      <div class="wetter-kopf">
+        <h2>Baden AG</h2>
+      </div>
+      <div class="wetter-hauptwert">
+        <div class="wetter-temperatur" id="wetter-temp">--°</div>
+        <div class="wetter-beschreibung" id="wetter-beschreibung">Lädt...</div>
+      </div>
+      <div class="wetter-details">
+        <div>Gefühlt <span class="wert" id="wetter-gefuehlt">--°</span></div>
+        <div>Wind <span class="wert" id="wetter-wind">-- km/h</span></div>
+        <div>Regen (1h) <span class="wert" id="wetter-regen">--%</span></div>
+      </div>
+    </div>
+    <div class="radar-box">
+      <div class="radar-titel">Regen &amp; Temperatur &middot; nächste 2 Stunden</div>
+      <div class="regen-temperaturen" id="regen-temperaturen"></div>
+      <div class="regen-leiste" id="regen-leiste"></div>
+      <div class="regen-zeiten" id="regen-zeiten"></div>
+      <div class="regen-mengen" id="regen-mengen"></div>
+    </div>
+  </div>
+
+<script>
+  // --- Split-Flap-Mechanik ---
+  // Zeichen, durch die ein Blatt kurz "durchrattert", bevor es beim
+  // Zielbuchstaben landet - genau wie bei den alten mechanischen Tafeln.
+  const FLAP_ZEICHENSATZ = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789   ";
+
+  // Dauer eines einzelnen Flips (muss zur CSS-Animationsdauer oben passen)
+  const FLAP_DAUER = 220;
+  const FLAP_DAUER_SCHNELL = 110;
+
+  function flapEinmalDrehen(el, zielZeichen, dannWeiter, dauer = FLAP_DAUER) {
+    el.classList.remove("dreht");
+    void el.offsetWidth; // Reflow erzwingen, damit die Animation sicher neu startet
+    el.style.setProperty("--flap-dauer", dauer + "ms");
+    el.classList.add("dreht");
+    // Auf halber Flip-Höhe (Blatt steht "auf der Kante", quasi unsichtbar)
+    // tauschen wir den Buchstaben aus - genau wie beim echten Mechanismus.
+    setTimeout(() => {
+      el.textContent = zielZeichen;
+    }, dauer * 0.48);
+    setTimeout(() => {
+      el.classList.remove("dreht");
+      if (dannWeiter) dannWeiter();
+    }, dauer);
+  }
+
+  // Lässt ein einzelnes Blatt rattern und dann beim echten Zielbuchstaben
+  // einrasten. Normal: 6-7 Zwischenschritte à 220ms (ca. 1.3-1.5s), wie bei
+  // den alten mechanischen Tafeln - man soll das Rattern sehen können.
+  // schnell=true (für die Sekundenanzeige der Uhr): nur 1 kurzer Flip
+  // (ca. 110ms), damit er innerhalb einer Sekunde fertig ist.
+  function flapZuZeichen(el, zielZeichen, schnell = false) {
+    const schritte = schnell ? 0 : 5 + Math.floor(Math.random() * 2);
+    const dauer = schnell ? FLAP_DAUER_SCHNELL : FLAP_DAUER;
+    let i = 0;
+    function naechsterSchritt() {
+      if (i < schritte) {
+        const zufallsZeichen = FLAP_ZEICHENSATZ[Math.floor(Math.random() * FLAP_ZEICHENSATZ.length)];
+        i++;
+        flapEinmalDrehen(el, zufallsZeichen, naechsterSchritt, dauer);
+      } else {
+        flapEinmalDrehen(el, zielZeichen, null, dauer);
+      }
+    }
+    naechsterSchritt();
+  }
+
+  // Baut (beim ersten Mal) oder aktualisiert (danach) ein Flap-Feld mit fester
+  // Zeichenbreite. text wird auf "breite" Zeichen aufgefüllt/gekürzt.
+  // verzoegerung verschiebt den Start aller Zeichen dieses Feldes (für die
+  // zeilenweise "Kaskade", wenn mehrere Verbindungen gleichzeitig nachrutschen).
+  // schnell aktiviert die kurze Flip-Variante (siehe flapZuZeichen).
+  function flapFeldSetzen(el, text, breite, ausrichtung = "links", verzoegerung = 0, schnell = false) {
+    const bereinigt = String(text).toUpperCase().slice(0, breite);
+    const aufgefuellt = ausrichtung === "rechts"
+      ? bereinigt.padStart(breite, " ")
+      : bereinigt.padEnd(breite, " ");
+
+    if (el.children.length === 0) {
+      // Erstes Rendern dieser Zeile: Blätter erzeugen und von einem
+      // zufälligen Startzeichen aus einrasten lassen (leicht zeitversetzt
+      // pro Zeichen, das ergibt die typische kleine "Welle").
+      for (let i = 0; i < breite; i++) {
+        const span = document.createElement("span");
+        span.className = "flap-char";
+        span.textContent = FLAP_ZEICHENSATZ[Math.floor(Math.random() * FLAP_ZEICHENSATZ.length)];
+        el.appendChild(span);
+        span.dataset.wert = aufgefuellt[i];
+        setTimeout(() => flapZuZeichen(span, aufgefuellt[i], schnell), verzoegerung + i * 40);
+      }
+    } else {
+      // Zeile existiert schon: nur die Zeichen animieren, die sich
+      // tatsächlich geändert haben.
+      Array.from(el.children).forEach((span, i) => {
+        if (span.dataset.wert !== aufgefuellt[i]) {
+          span.dataset.wert = aufgefuellt[i];
+          setTimeout(() => flapZuZeichen(span, aufgefuellt[i], schnell), verzoegerung + i * 40);
+        }
+      });
+    }
+  }
+
+  function ladeAbfahrten(stationsname, zielElementId, hervorhebenDeparture = null, hervorhebenAnkunftText = null, hervorhebenLinie = null) {
+    const url = `https://transport.opendata.ch/v1/stationboard?station=${encodeURIComponent(stationsname)}&limit=16`;
+
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        const container = document.getElementById(zielElementId);
+
+        // Verbindungen, die (inkl. aktueller Verspätung) in weniger als
+        // 4 Minuten abfahren, sind selbst im Laufschritt nicht mehr zu
+        // schaffen - die blenden wir komplett aus, statt sie nur abzudunkeln.
+        const MINDESTVORLAUF_MINUTEN = 4;
+        const fruehestMoeglich = new Date(Date.now() + MINDESTVORLAUF_MINUTEN * 60000);
+        const gefilterteAbfahrten = data.stationboard.filter(abfahrt => {
+          const geplant = new Date(abfahrt.stop.departure);
+          const effektiv = abfahrt.stop.prognosis && abfahrt.stop.prognosis.departure
+            ? new Date(abfahrt.stop.prognosis.departure)
+            : geplant;
+          return effektiv >= fruehestMoeglich;
+        });
+
+        // Nur beim allerersten Laden bauen wir die Zeilen-Grundstruktur neu auf.
+        // Bei jedem weiteren Aktualisieren behalten wir die vorhandenen
+        // Flap-Felder bei und füttern sie mit neuen Werten - so drehen sich
+        // nur die Zeichen, die sich wirklich geändert haben.
+        const ersteLadung = container.children.length !== gefilterteAbfahrten.length;
+
+        if (ersteLadung) {
+          container.innerHTML = "";
+        }
+
+        gefilterteAbfahrten.forEach((abfahrt, index) => {
+          const linie = abfahrt.category + abfahrt.number;
+          const ziel = abfahrt.to;
+          const stop = abfahrt.stop;
+
+          const geplantesGleis = stop.platform || '–';
+          const prognoseGleis = stop.prognosis ? stop.prognosis.platform : null;
+          const gleisGeaendert = prognoseGleis && prognoseGleis !== geplantesGleis;
+          const anzeigeGleis = gleisGeaendert ? prognoseGleis : geplantesGleis;
+
+          const geplantZeit = new Date(stop.departure);
+          const geplantText = geplantZeit.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+
+          // Tatsächlich zu erwartende Abfahrt inkl. Verspätung (falls bekannt) -
+          // massgebend dafür, ob man den Zug zu Fuss noch erreichen kann.
+          const effektiveAbfahrt = stop.prognosis && stop.prognosis.departure
+            ? new Date(stop.prognosis.departure)
+            : geplantZeit;
+          const GEHZEIT_MINUTEN = 6;
+          const nichtMehrErreichbar = effektiveAbfahrt < new Date(Date.now() + GEHZEIT_MINUTEN * 60000);
+
+          const verspaetungMin = stop.delay;
+          const istVerspaetet = verspaetungMin && verspaetungMin > 2;
+
+          // Abfahrtszeit ALLEIN reicht nicht als eindeutiger Schlüssel - fahren
+          // zwei Züge zur exakt gleichen Minute, brauchen wir zwingend auch
+          // die Linie. Kein Fallback mehr: ohne eindeutige Linie lieber gar
+          // keine Hervorhebung als versehentlich die falsche Zeile markieren.
+          const istBeste = hervorhebenDeparture
+            && hervorhebenLinie
+            && stop.departure === hervorhebenDeparture
+            && linie.trim().toUpperCase() === hervorhebenLinie.trim().toUpperCase();
+
+          let zeile;
+          if (ersteLadung) {
+            zeile = document.createElement("div");
+            zeile.innerHTML = `
+              <div class="linie"><span class="flap-feld"></span></div>
+              <div class="ziel">
+                <span class="flap-feld"></span>
+                <span class="hinweis"></span>
+              </div>
+              <div class="gleis"><span class="flap-feld"></span></div>
+              <div class="zeit">
+                <span class="flap-feld"></span>
+                <span class="verspaetet"></span>
+              </div>`;
+            container.appendChild(zeile);
+          } else {
+            zeile = container.children[index];
+          }
+
+          zeile.className = `zeile ${nichtMehrErreichbar ? 'nicht-erreichbar' : ''}`;
+          zeile.querySelector(".gleis").className = `gleis ${gleisGeaendert ? 'geaendert' : ''}`;
+
+          // Zustand merken (z.B. für eine mögliche spätere Verwendung) -
+          // aktuell ohne akustisches Signal.
+          const jetztAlarm = gleisGeaendert || istVerspaetet;
+          zeile.dataset.alarm = jetztAlarm ? "1" : "0";
+
+          // Jede Zeile startet leicht zeitversetzt zur vorherigen - das ergibt
+          // die schöne Kaskade, wenn beim Nachrutschen mehrere Zeilen auf
+          // einmal einen neuen Wert bekommen.
+          const zeilenVerzoegerung = index * 90;
+
+          flapFeldSetzen(zeile.querySelector(".linie .flap-feld"), linie, 4, "links", zeilenVerzoegerung);
+          flapFeldSetzen(zeile.querySelector(".ziel .flap-feld"), ziel, 14, "links", zeilenVerzoegerung);
+          flapFeldSetzen(zeile.querySelector(".gleis .flap-feld"), anzeigeGleis, 3, "rechts", zeilenVerzoegerung);
+          flapFeldSetzen(zeile.querySelector(".zeit .flap-feld"), geplantText, 5, "links", zeilenVerzoegerung);
+
+          zeile.querySelector(".hinweis").textContent =
+            istBeste ? `in Zürich um ${hervorhebenAnkunftText} Uhr` : '';
+
+          zeile.querySelector(".verspaetet").textContent =
+            istVerspaetet ? `+${verspaetungMin}' Verspätung` : '';
+        });
+      })
+      .catch(error => {
+        document.getElementById(zielElementId).innerHTML =
+          `<div class="fehler">Fehler beim Laden: ${error}</div>`;
+      });
+  }
+
+  // Zwischengespeichertes Ergebnis der letzten erfolgreichen Verbindungsabfrage.
+  // So kann die Abfahrtstafel häufig aktualisiert werden (Zeiten, Verspätungen),
+  // ohne dass wir dafür jedes Mal auch die aufwändigere Verbindungssuche
+  // erneut abfragen müssen.
+  let letzteBesteAbfahrt = null;
+  let letzteBesteLinie = null;
+  let letzterAnkunftText = null;
+
+  // Holt die echten Verbindungen Baden -> Zürich HB (mit Ankunftszeit) und
+  // findet heraus, welche Abfahrt ab Baden am frühesten in Zürich HB ankommt.
+  // Das kann eine andere sein als die zeitlich nächste Abfahrt, z.B. wenn ein
+  // IC einen früheren, aber langsameren Regionalzug noch überholt.
+  function aktualisiereHervorhebung() {
+    const connUrl = `https://transport.opendata.ch/v1/connections?from=${encodeURIComponent("Baden")}&to=${encodeURIComponent("Zürich HB")}&limit=8`;
+
+    fetch(connUrl)
+      .then(r => r.json())
+      .then(connData => {
+        let besteAbfahrt = null;
+        let besteLinie = null;
+        let fruehesteAnkunft = null;
+        const GEHZEIT_MINUTEN = 6;
+        const fruehestErreichbar = new Date(Date.now() + GEHZEIT_MINUTEN * 60000);
+
+        connData.connections.forEach(verbindung => {
+          // Auch hier: tatsächlich zu erwartende Abfahrt inkl. Verspätung
+          // zugrunde legen, nicht nur die geplante Zeit.
+          const abfahrtStop = verbindung.from;
+          const effektiveAbfahrt = abfahrtStop.prognosis && abfahrtStop.prognosis.departure
+            ? new Date(abfahrtStop.prognosis.departure)
+            : new Date(abfahrtStop.departure);
+
+          // Verbindungen, die man zu Fuss (6 Min.) nicht mehr erreicht,
+          // kommen für die Hervorhebung gar nicht erst in Frage.
+          if (effektiveAbfahrt < fruehestErreichbar) return;
+
+          const ankunft = new Date(verbindung.to.arrival);
+          if (!fruehesteAnkunft || ankunft < fruehesteAnkunft) {
+            fruehesteAnkunft = ankunft;
+            besteAbfahrt = verbindung.from.departure;
+            // Die erste Sektion mit einer echten journey (kein Fussweg) ist
+            // der Zug, den man ab Baden tatsächlich besteigt - dessen Linie
+            // brauchen wir zur eindeutigen Zuordnung.
+            const zugSektion = (verbindung.sections || []).find(s => s.journey);
+            besteLinie = zugSektion
+              ? zugSektion.journey.category + zugSektion.journey.number
+              : null;
+          }
+        });
+
+        letzteBesteAbfahrt = besteAbfahrt;
+        letzteBesteLinie = besteLinie;
+        letzterAnkunftText = fruehesteAnkunft
+          ? fruehesteAnkunft.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+          : null;
+
+        aktualisiereBadenTafel();
+      })
+      .catch(() => {
+        // Falls die Verbindungsabfrage (vorübergehend, z.B. durch ein
+        // Rate-Limit der öffentlichen API) scheitert, behalten wir einfach
+        // den letzten bekannten Stand bei und aktualisieren die Tafel trotzdem
+        // normal weiter - beim nächsten Versuch (in 60s) wird's neu geholt.
+        aktualisiereBadenTafel();
+      });
+  }
+
+  // Aktualisiert nur die Abfahrtstafel selbst (Zeiten, Verspätungen, Gleise) -
+  // nutzt dafür den zuletzt bekannten Hervorhebungs-Stand, ohne eine neue,
+  // aufwändigere Verbindungsabfrage auszulösen.
+  function aktualisiereBadenTafel() {
+    ladeAbfahrten("Baden", "tabelle-baden", letzteBesteAbfahrt, letzterAnkunftText, letzteBesteLinie);
+  }
+
+  function aktualisiereUhr() {
+    const jetzt = new Date();
+    const zeitText = jetzt.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    flapFeldSetzen(document.getElementById("uhr"), zeitText, 8, "links", 0, true);
+  }
+
+  // --- Wetter ---
+  // Open-Meteo: kostenlos, kein API-Key nötig. Koordinaten von Baden AG.
+  const WETTER_BREITENGRAD = 47.476;
+  const WETTER_LAENGENGRAD = 8.309;
+
+  // Kurze deutsche Beschreibung zum WMO-Wettercode, den Open-Meteo liefert.
+  function wettercodeText(code) {
+    const zuordnung = {
+      0: "Klar", 1: "Meist klar", 2: "Teilweise bewölkt", 3: "Bedeckt",
+      45: "Nebel", 48: "Nebel (Reif)",
+      51: "Leichter Sprühregen", 53: "Sprühregen", 55: "Starker Sprühregen",
+      61: "Leichter Regen", 63: "Regen", 65: "Starker Regen",
+      66: "Gefrierender Regen", 67: "Starker gefrierender Regen",
+      71: "Leichter Schneefall", 73: "Schneefall", 75: "Starker Schneefall",
+      77: "Schneegriesel",
+      80: "Leichte Schauer", 81: "Schauer", 82: "Starke Schauer",
+      85: "Leichte Schneeschauer", 86: "Starke Schneeschauer",
+      95: "Gewitter", 96: "Gewitter mit Hagel", 99: "Starkes Gewitter mit Hagel"
+    };
+    return zuordnung[code] || "–";
+  }
+
+  function aktualisiereWetter() {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${WETTER_BREITENGRAD}&longitude=${WETTER_LAENGENGRAD}` +
+      `&current=temperature_2m,apparent_temperature,weathercode,windspeed_10m,precipitation_probability` +
+      `&minutely_15=precipitation,temperature_2m` +
+      `&timezone=Europe%2FZurich`;
+
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        const c = data.current;
+        document.getElementById("wetter-temp").textContent = Math.round(c.temperature_2m) + "°";
+        document.getElementById("wetter-beschreibung").textContent = wettercodeText(c.weathercode);
+        document.getElementById("wetter-gefuehlt").textContent = Math.round(c.apparent_temperature) + "°";
+        document.getElementById("wetter-wind").textContent = Math.round(c.windspeed_10m) + " km/h";
+        document.getElementById("wetter-regen").textContent =
+          (c.precipitation_probability !== undefined ? c.precipitation_probability : "--") + "%";
+
+        aktualisiereRegenvorschau(data.minutely_15);
+      })
+      .catch(() => {
+        document.getElementById("wetter-beschreibung").textContent = "Wetterdaten nicht verfügbar";
+      });
+  }
+
+  // Baut die 8 Balken für die nächsten 2 Stunden (15-Min-Schritte) - startet
+  // immer bei "jetzt", nie in der Vergangenheit, da wir den passenden Index
+  // bei jedem Aufruf neu anhand der aktuellen Uhrzeit suchen.
+  function aktualisiereRegenvorschau(minutlich) {
+    if (!minutlich || !minutlich.time) return;
+
+    const jetzt = new Date();
+    let startIndex = minutlich.time.findIndex(t => new Date(t) >= jetzt);
+    if (startIndex === -1) startIndex = 0;
+
+    const ANZAHL_SCHRITTE = 8; // 8 x 15 Min. = 2 Stunden
+    const zeiten = minutlich.time.slice(startIndex, startIndex + ANZAHL_SCHRITTE);
+    const werte = minutlich.precipitation.slice(startIndex, startIndex + ANZAHL_SCHRITTE);
+    const temperaturen = minutlich.temperature_2m.slice(startIndex, startIndex + ANZAHL_SCHRITTE);
+
+    const MAX_BALKENHOEHE_MM = 3; // ab dieser Menge pro 15 Min. ist der Balken "voll"
+
+    const temperaturZeile = document.getElementById("regen-temperaturen");
+    const leiste = document.getElementById("regen-leiste");
+    const zeitenZeile = document.getElementById("regen-zeiten");
+    const mengenZeile = document.getElementById("regen-mengen");
+
+    temperaturZeile.innerHTML = "";
+    leiste.innerHTML = "";
+    zeitenZeile.innerHTML = "";
+    mengenZeile.innerHTML = "";
+
+    zeiten.forEach((zeit, i) => {
+      const mm = werte[i] || 0;
+      const hoehe = Math.min(100, (mm / MAX_BALKENHOEHE_MM) * 100);
+
+      const tempLabel = document.createElement("div");
+      tempLabel.textContent = Math.round(temperaturen[i]) + "°";
+      temperaturZeile.appendChild(tempLabel);
+
+      const spalte = document.createElement("div");
+      spalte.className = "regen-balken-spalte";
+      const balken = document.createElement("div");
+      balken.className = "regen-balken" + (mm <= 0 ? " kein-regen" : "");
+      balken.style.height = Math.max(3, hoehe) + "%";
+      spalte.appendChild(balken);
+      leiste.appendChild(spalte);
+
+      const zeitLabel = document.createElement("div");
+      zeitLabel.textContent = new Date(zeit).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+      zeitenZeile.appendChild(zeitLabel);
+
+      const mengeLabel = document.createElement("div");
+      mengeLabel.textContent = mm > 0 ? mm.toFixed(1) : "–";
+      mengenZeile.appendChild(mengeLabel);
+    });
+  }
+
+  // --- Ansichten-Umschaltung: rotiert alle 10 Sekunden zwischen Zugtafel
+  // und Wetter ---
+  const ansichten = [
+    document.getElementById("ansicht-zug"),
+    document.getElementById("ansicht-wetter")
+  ];
+  let aktiverIndex = 0;
+
+  function ansichtWechseln() {
+    ansichten[aktiverIndex].classList.remove("aktiv");
+    aktiverIndex = (aktiverIndex + 1) % ansichten.length;
+    ansichten[aktiverIndex].classList.add("aktiv");
+  }
+
+  aktualisiereHervorhebung(); // holt Verbindungsdaten UND rendert die Tafel ein erstes Mal
+  aktualisiereUhr();
+  aktualisiereWetter();
+  setInterval(aktualisiereBadenTafel, 10000);   // Zeiten/Verspätungen: häufig
+  setInterval(aktualisiereHervorhebung, 60000); // Verbindungssuche: seltener, schont die API
+  setInterval(aktualisiereUhr, 1000);
+  setInterval(aktualisiereWetter, 10 * 60000);  // Wetter ändert sich langsam: alle 10 Minuten reicht
+  setInterval(ansichtWechseln, 10000);          // Umschaltung zwischen den Ansichten (je 10s pro Ansicht)
+</script>
+
+
+</body>
+</html>
