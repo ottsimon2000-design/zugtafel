@@ -243,13 +243,43 @@
     text-transform: uppercase;
   }
 
+  /* Hero-Block: Icon+Temperatur, darunter "Gefühlt" als Unterzeile - alles
+     eng zusammengehörige "Jetzt"-Werte. */
   .wetter-haupt {
-    flex: 1.4;
+    flex: 1.6;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3vw;
+    gap: 1.4vh;
     min-height: 0;
+  }
+
+  /* Icon über der Temperatur (nicht daneben) - im Hochformat ist die
+     Bildschirmbreite nach Abzug des Seitenrands knapp, und Icon + grosse
+     Zahl nebeneinander würden dort über den Rand hinauslaufen. Im
+     Querformat (siehe Media Query unten) stehen sie nebeneinander, weil
+     dort Breite im Überfluss vorhanden ist, aber die Höhe knapp wird. */
+  .wetter-haupt-zahl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1vh;
+  }
+
+  .wetter-gefuehlt {
+    font-size: clamp(1em, 4vh, 2em);
+    color: #b37a00;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .wetter-gefuehlt span {
+    color: #ffb000;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
   }
 
   .wetter-icon {
@@ -257,7 +287,7 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    font-size: clamp(3.2em, 19vh, 8.5em);
+    font-size: clamp(2.2em, 11vh, 5.5em);
     color: #ffb000;
   }
 
@@ -268,7 +298,7 @@
   }
 
   .wetter-temperatur {
-    font-size: clamp(5em, 27vh, 12em);
+    font-size: clamp(3.5em, 18vh, 7em);
     font-weight: 700;
     line-height: 1;
   }
@@ -346,6 +376,21 @@
       font-size: clamp(1.05em, 10vh, 1.7em);
       padding: 8px 0;
     }
+
+    /* Im Querformat ist reichlich Breite vorhanden - dort darf das Icon
+       wieder neben statt über der Temperatur stehen, beide etwas grösser. */
+    .wetter-haupt-zahl {
+      flex-direction: row;
+      gap: 3vw;
+    }
+
+    .wetter-icon {
+      font-size: clamp(2.6em, 15vh, 6.5em);
+    }
+
+    .wetter-temperatur {
+      font-size: clamp(4em, 22vh, 9em);
+    }
   }
 </style>
 </head>
@@ -366,20 +411,19 @@
         <h2>Baden AG</h2>
       </div>
       <div class="wetter-haupt">
-        <div class="wetter-icon" id="wetter-icon"></div>
-        <div class="wetter-temperatur" id="wetter-temp">--°</div>
+        <div class="wetter-haupt-zahl">
+          <div class="wetter-icon" id="wetter-icon"></div>
+          <div class="wetter-temperatur" id="wetter-temp">--°</div>
+        </div>
+        <div class="wetter-gefuehlt">Gefühlt <span id="wetter-gefuehlt">--°</span></div>
       </div>
       <div class="wetter-reihe">
         <div class="wetter-kachel">
-          <div class="kachel-label">Gefühlt</div>
-          <div class="kachel-wert" id="wetter-gefuehlt">--°</div>
-        </div>
-        <div class="wetter-kachel">
-          <div class="kachel-label">Max. heute</div>
+          <div class="kachel-label">Max heute</div>
           <div class="kachel-wert" id="wetter-max">--°</div>
         </div>
         <div class="wetter-kachel">
-          <div class="kachel-label">Min. heute</div>
+          <div class="kachel-label">Min heute</div>
           <div class="kachel-wert" id="wetter-min">--°</div>
         </div>
       </div>
