@@ -211,7 +211,19 @@
   #ansicht-wetter.aktiv {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    height: 100%;
+  }
+
+  /* Die Wetteransicht nutzt den ganzen Bildschirm: eine Kopfzeile, dann die
+     grosse Haupttemperatur, dann zwei Kachelreihen - alles mit vh-basierten
+     Schriftgrössen, damit es auf jedem Bildschirmformat maximal gross und
+     von weitem lesbar bleibt. */
+  .wetter-full {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 3vh;
   }
 
   .wetter-kopf {
@@ -220,151 +232,93 @@
     justify-content: space-between;
     border-bottom: 2px solid #3a2600;
     padding-bottom: 10px;
+    flex: none;
   }
 
   .wetter-kopf h2 {
-    font-size: 1.1em;
+    font-size: clamp(1em, 3.2vh, 1.7em);
     font-weight: 600;
     color: #b37a00;
     margin: 0;
     text-transform: uppercase;
   }
 
-  .wetter-hauptwert {
+  .wetter-haupt {
+    flex: 1.4;
     display: flex;
-    align-items: baseline;
-    gap: 20px;
-    flex-wrap: wrap;
-  }
-
-  .wetter-temperatur {
-    font-size: clamp(2.2em, 9vw, 4.5em);
-    font-weight: 700;
-  }
-
-  .wetter-beschreibung {
-    font-size: clamp(1em, 3vw, 1.6em);
-    color: #ffb000;
-    text-transform: uppercase;
-  }
-
-  .wetter-details {
-    display: flex;
-    gap: 32px;
-    flex-wrap: wrap;
-    font-size: clamp(0.85em, 2.4vw, 1.2em);
-    color: #b37a00;
-  }
-
-  .wetter-details span.wert {
-    color: #ffb000;
-    font-weight: 600;
-  }
-
-  .radar-box {
-    border: 1px solid #3a2600;
-    padding: 10px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3vw;
     min-height: 0;
   }
 
-  .radar-box .radar-titel {
-    font-size: 0.75em;
-    color: #b37a00;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-    letter-spacing: 2px;
-  }
-
-  .regen-leiste {
-    position: relative;
+  .wetter-icon {
     display: flex;
-    align-items: flex-end;
-    gap: 6px;
-    height: 140px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #3a2600;
-  }
-
-  .regen-balken-spalte {
-    flex: 1;
-    height: 100%;
-    display: flex;
-    align-items: flex-end;
-  }
-
-  .regen-balken {
-    width: 100%;
-    min-height: 3px;
-    background: linear-gradient(to top, #7a5400, #ffb000);
-    box-shadow: 0 0 6px rgba(255, 176, 0, 0.3);
-  }
-
-  .regen-balken.kein-regen {
-    background: #241a05;
-    box-shadow: none;
-  }
-
-  .regen-temperaturen {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 4px;
-  }
-
-  .regen-temperaturen div {
-    flex: 1;
-    text-align: center;
-    font-size: 0.65em;
-    font-weight: 700;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: clamp(3.2em, 19vh, 8.5em);
     color: #ffb000;
   }
 
-  .regen-zeiten {
-    display: flex;
-    gap: 6px;
-    margin-top: 6px;
+  .wetter-icon svg {
+    width: 1em;
+    height: 1em;
+    display: block;
   }
 
-  .regen-zeiten div {
+  .wetter-temperatur {
+    font-size: clamp(5em, 27vh, 12em);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .wetter-reihe {
     flex: 1;
-    text-align: center;
-    font-size: 0.55em;
+    display: flex;
+    gap: 3vw;
+    min-height: 0;
+  }
+
+  .wetter-kachel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15em;
+    min-width: 0;
+  }
+
+  .kachel-label {
+    font-size: clamp(0.7em, 2.1vh, 1.3em);
     color: #b37a00;
-  }
-
-  .regen-mengen {
-    display: flex;
-    gap: 6px;
-    margin-top: 2px;
-  }
-
-  .regen-mengen div {
-    flex: 1;
+    text-transform: uppercase;
+    letter-spacing: 2px;
     text-align: center;
-    font-size: 0.5em;
-    color: #7a5400;
   }
 
-  @media (orientation: landscape) and (max-height: 600px) {
-    #ansicht-wetter.aktiv {
-      flex-direction: row;
-      gap: 40px;
-    }
-
-    .wetter-textspalte {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      justify-content: flex-start;
-    }
-
-    .radar-box {
-      flex: 1.3;
-    }
+  .kachel-wert {
+    font-size: clamp(1.8em, 8.5vh, 4.2em);
+    font-weight: 700;
+    color: #ffb000;
+    line-height: 1;
+    text-align: center;
   }
+
+  .kachel-wert svg {
+    width: 1em;
+    height: 1em;
+    display: block;
+  }
+
+  /* Regen-Ja/Nein-Werte heben sich bei "Ja" farblich ab - gleiche
+     Signalfarbe wie Verspätungen/Gleisänderungen auf der Zugtafel. */
+  .kachel-wert.ja {
+    color: #ff3b30;
+    text-shadow: 0 0 10px rgba(255, 59, 48, 0.85);
+  }
+
   @media (orientation: landscape) and (max-height: 600px) {
     body {
       padding-top: 14px;
@@ -407,26 +361,38 @@
   </div>
 
   <div class="ansicht" id="ansicht-wetter">
-    <div class="wetter-textspalte">
+    <div class="wetter-full">
       <div class="wetter-kopf">
         <h2>Baden AG</h2>
       </div>
-      <div class="wetter-hauptwert">
+      <div class="wetter-haupt">
+        <div class="wetter-icon" id="wetter-icon"></div>
         <div class="wetter-temperatur" id="wetter-temp">--°</div>
-        <div class="wetter-beschreibung" id="wetter-beschreibung">Lädt...</div>
       </div>
-      <div class="wetter-details">
-        <div>Gefühlt <span class="wert" id="wetter-gefuehlt">--°</span></div>
-        <div>Wind <span class="wert" id="wetter-wind">-- km/h</span></div>
-        <div>Regen (1h) <span class="wert" id="wetter-regen">--%</span></div>
+      <div class="wetter-reihe">
+        <div class="wetter-kachel">
+          <div class="kachel-label">Gefühlt</div>
+          <div class="kachel-wert" id="wetter-gefuehlt">--°</div>
+        </div>
+        <div class="wetter-kachel">
+          <div class="kachel-label">Max. heute</div>
+          <div class="kachel-wert" id="wetter-max">--°</div>
+        </div>
+        <div class="wetter-kachel">
+          <div class="kachel-label">Min. heute</div>
+          <div class="kachel-wert" id="wetter-min">--°</div>
+        </div>
       </div>
-    </div>
-    <div class="radar-box">
-      <div class="radar-titel">Regen &amp; Temperatur &middot; nächste 2 Stunden</div>
-      <div class="regen-temperaturen" id="regen-temperaturen"></div>
-      <div class="regen-leiste" id="regen-leiste"></div>
-      <div class="regen-zeiten" id="regen-zeiten"></div>
-      <div class="regen-mengen" id="regen-mengen"></div>
+      <div class="wetter-reihe">
+        <div class="wetter-kachel">
+          <div class="kachel-label">Regen 30 Min.</div>
+          <div class="kachel-wert" id="wetter-regen-30min">--</div>
+        </div>
+        <div class="wetter-kachel">
+          <div class="kachel-label">Regen heute</div>
+          <div class="kachel-wert" id="wetter-regen-heute">--</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -711,27 +677,132 @@
   const WETTER_BREITENGRAD = 47.476;
   const WETTER_LAENGENGRAD = 8.309;
 
-  // Kurze deutsche Beschreibung zum WMO-Wettercode, den Open-Meteo liefert.
-  function wettercodeText(code) {
-    const zuordnung = {
-      0: "Klar", 1: "Meist klar", 2: "Teilweise bewölkt", 3: "Bedeckt",
-      45: "Nebel", 48: "Nebel (Reif)",
-      51: "Leichter Sprühregen", 53: "Sprühregen", 55: "Starker Sprühregen",
-      61: "Leichter Regen", 63: "Regen", 65: "Starker Regen",
-      66: "Gefrierender Regen", 67: "Starker gefrierender Regen",
-      71: "Leichter Schneefall", 73: "Schneefall", 75: "Starker Schneefall",
-      77: "Schneegriesel",
-      80: "Leichte Schauer", 81: "Schauer", 82: "Starke Schauer",
-      85: "Leichte Schneeschauer", 86: "Starke Schneeschauer",
-      95: "Gewitter", 96: "Gewitter mit Hagel", 99: "Starkes Gewitter mit Hagel"
-    };
-    return zuordnung[code] || "–";
+  // Liefert ein einfarbiges SVG-Symbol (passend zum Amber-LED-Look) für den
+  // WMO-Wettercode, den Open-Meteo zurückgibt - gruppiert in sechs einfache
+  // Kategorien statt für jeden einzelnen Code ein eigenes Icon zu haben.
+  // Gemeinsamer SVG-Rahmen für alle Icons auf der Wetteransicht - einfarbig
+  // (currentColor), damit sie sich wie der Rest der Anzeige einfärben lassen.
+  const SVG_START = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">';
+  const SVG_ENDE = '</svg>';
+
+  function wetterIconSvg(code) {
+    const KLAR = [0, 1];
+    const NEBEL = [45, 48];
+    const GEWITTER = [95, 96, 99];
+    const SCHNEE = [71, 73, 75, 77, 85, 86];
+    const REGEN = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82];
+
+    const start = SVG_START;
+    const ende = SVG_ENDE;
+    const wolke = '<path d="M7 17h10a3.5 3.5 0 0 0 0-7 4.5 4.5 0 0 0-8.6-1.6A3.5 3.5 0 0 0 7 17z"/>';
+
+    if (KLAR.includes(code)) {
+      return start +
+        '<circle cx="12" cy="12" r="4"/>' +
+        '<line x1="12" y1="2" x2="12" y2="5"/>' +
+        '<line x1="12" y1="19" x2="12" y2="22"/>' +
+        '<line x1="2" y1="12" x2="5" y2="12"/>' +
+        '<line x1="19" y1="12" x2="22" y2="12"/>' +
+        '<line x1="4.2" y1="4.2" x2="6.3" y2="6.3"/>' +
+        '<line x1="17.7" y1="17.7" x2="19.8" y2="19.8"/>' +
+        '<line x1="4.2" y1="19.8" x2="6.3" y2="17.7"/>' +
+        '<line x1="17.7" y1="6.3" x2="19.8" y2="4.2"/>' +
+        ende;
+    }
+    if (NEBEL.includes(code)) {
+      return start +
+        '<line x1="4" y1="8" x2="20" y2="8"/>' +
+        '<line x1="4" y1="12" x2="20" y2="12"/>' +
+        '<line x1="4" y1="16" x2="20" y2="16"/>' +
+        ende;
+    }
+    if (GEWITTER.includes(code)) {
+      return start + wolke +
+        '<path d="M13 13l-2.5 4.5h2.5l-1.5 3.5 4-5.5h-2.5l2-2.5z" fill="currentColor" stroke="none"/>' +
+        ende;
+    }
+    if (SCHNEE.includes(code)) {
+      return start + wolke +
+        '<line x1="8" y1="19" x2="8" y2="21"/>' +
+        '<line x1="12" y1="19" x2="12" y2="22"/>' +
+        '<line x1="16" y1="19" x2="16" y2="21"/>' +
+        ende;
+    }
+    if (REGEN.includes(code)) {
+      return start + wolke +
+        '<line x1="9" y1="19" x2="8" y2="22"/>' +
+        '<line x1="13" y1="19" x2="12" y2="22"/>' +
+        '<line x1="17" y1="19" x2="16" y2="22"/>' +
+        ende;
+    }
+    // Default: bewölkt (deckt u.a. die Codes 2 und 3 ab)
+    return start + wolke + ende;
+  }
+
+  // Offener Regenschirm mit Regentropfen (regnet) bzw. geschlossener
+  // Regenschirm (regnet nicht) - als Symbol statt Ja/Nein-Text.
+  function regenschirmSvg(offen) {
+    if (offen) {
+      // Offen: schräg fallende Regentropfen oberhalb der Kuppel, darunter
+      // die Kuppel mit Rippen/Zacken am Rand, Stock und Haken-Griff.
+      return SVG_START +
+        '<line x1="6.5" y1="0.3" x2="7.9" y2="2.9"/>' +
+        '<line x1="11.3" y1="0" x2="12.7" y2="2.6"/>' +
+        '<line x1="16.1" y1="0.3" x2="17.5" y2="2.9"/>' +
+        '<path d="M4 13a8 8 0 0 1 16 0"/>' +
+        '<line x1="4" y1="13" x2="4" y2="14"/>' +
+        '<line x1="8" y1="13" x2="8" y2="14.4"/>' +
+        '<line x1="12" y1="13" x2="12" y2="14.8"/>' +
+        '<line x1="16" y1="13" x2="16" y2="14.4"/>' +
+        '<line x1="20" y1="13" x2="20" y2="14"/>' +
+        '<line x1="12" y1="13" x2="12" y2="20"/>' +
+        '<path d="M12 20a2 2 0 1 0 2 2"/>' +
+        SVG_ENDE;
+    }
+    // Geschlossen: Haken-Griff oben, darunter das lange, spitz zulaufende,
+    // zusammengerollte Tuch mit erkennbaren Falt-Linien und der kleinen
+    // Spitze ganz unten - wie ein zusammengeklappter Schirm, der am Griff
+    // hängt.
+    return SVG_START +
+      '<path d="M12 2.2a2 2 0 1 0 -2 2"/>' +
+      '<line x1="12" y1="2.2" x2="12" y2="6"/>' +
+      '<path d="M9.3 6 L14.7 6 L12 21.5 Z"/>' +
+      '<line x1="10.8" y1="6.3" x2="11.6" y2="19.2"/>' +
+      '<line x1="13.2" y1="6.3" x2="12.4" y2="19.2"/>' +
+      '<line x1="12" y1="21.5" x2="12" y2="23"/>' +
+      SVG_ENDE;
+  }
+
+  // Setzt das Regenschirm-Symbol und hebt "regnet" farblich hervor (gleiche
+  // Signalfarbe wie Verspätungen/Gleisänderungen).
+  function setRegenJaNein(elementId, istRegen) {
+    const el = document.getElementById(elementId);
+    el.innerHTML = regenschirmSvg(istRegen);
+    el.classList.toggle("ja", istRegen);
+  }
+
+  // Prüft anhand der 15-Minuten-Niederschlagswerte, ob es in den nächsten
+  // 30 Minuten (= den naechsten zwei 15-Minuten-Schritten ab "jetzt") regnet.
+  function aktualisiereRegen30Min(minutlich) {
+    if (!minutlich || !minutlich.time) {
+      setRegenJaNein("wetter-regen-30min", false);
+      return;
+    }
+
+    const jetzt = new Date();
+    let startIndex = minutlich.time.findIndex(t => new Date(t) >= jetzt);
+    if (startIndex === -1) startIndex = 0;
+
+    const naechsteWerte = minutlich.precipitation.slice(startIndex, startIndex + 2);
+    const regenBald = naechsteWerte.some(mm => mm > 0);
+    setRegenJaNein("wetter-regen-30min", regenBald);
   }
 
   function aktualisiereWetter() {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${WETTER_BREITENGRAD}&longitude=${WETTER_LAENGENGRAD}` +
-      `&current=temperature_2m,apparent_temperature,weathercode,windspeed_10m,precipitation_probability` +
-      `&minutely_15=precipitation,temperature_2m` +
+      `&current=temperature_2m,apparent_temperature,weathercode` +
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum` +
+      `&minutely_15=precipitation` +
       `&timezone=Europe%2FZurich`;
 
     fetch(url)
@@ -739,70 +810,19 @@
       .then(data => {
         const c = data.current;
         document.getElementById("wetter-temp").textContent = Math.round(c.temperature_2m) + "°";
-        document.getElementById("wetter-beschreibung").textContent = wettercodeText(c.weathercode);
+        document.getElementById("wetter-icon").innerHTML = wetterIconSvg(c.weathercode);
         document.getElementById("wetter-gefuehlt").textContent = Math.round(c.apparent_temperature) + "°";
-        document.getElementById("wetter-wind").textContent = Math.round(c.windspeed_10m) + " km/h";
-        document.getElementById("wetter-regen").textContent =
-          (c.precipitation_probability !== undefined ? c.precipitation_probability : "--") + "%";
 
-        aktualisiereRegenvorschau(data.minutely_15);
+        const d = data.daily;
+        document.getElementById("wetter-max").textContent = Math.round(d.temperature_2m_max[0]) + "°";
+        document.getElementById("wetter-min").textContent = Math.round(d.temperature_2m_min[0]) + "°";
+        setRegenJaNein("wetter-regen-heute", d.precipitation_sum[0] > 0);
+
+        aktualisiereRegen30Min(data.minutely_15);
       })
       .catch(() => {
-        document.getElementById("wetter-beschreibung").textContent = "Wetterdaten nicht verfügbar";
+        document.getElementById("wetter-temp").textContent = "–";
       });
-  }
-
-  // Baut die 8 Balken für die nächsten 2 Stunden (15-Min-Schritte) - startet
-  // immer bei "jetzt", nie in der Vergangenheit, da wir den passenden Index
-  // bei jedem Aufruf neu anhand der aktuellen Uhrzeit suchen.
-  function aktualisiereRegenvorschau(minutlich) {
-    if (!minutlich || !minutlich.time) return;
-
-    const jetzt = new Date();
-    let startIndex = minutlich.time.findIndex(t => new Date(t) >= jetzt);
-    if (startIndex === -1) startIndex = 0;
-
-    const ANZAHL_SCHRITTE = 8; // 8 x 15 Min. = 2 Stunden
-    const zeiten = minutlich.time.slice(startIndex, startIndex + ANZAHL_SCHRITTE);
-    const werte = minutlich.precipitation.slice(startIndex, startIndex + ANZAHL_SCHRITTE);
-    const temperaturen = minutlich.temperature_2m.slice(startIndex, startIndex + ANZAHL_SCHRITTE);
-
-    const MAX_BALKENHOEHE_MM = 3; // ab dieser Menge pro 15 Min. ist der Balken "voll"
-
-    const temperaturZeile = document.getElementById("regen-temperaturen");
-    const leiste = document.getElementById("regen-leiste");
-    const zeitenZeile = document.getElementById("regen-zeiten");
-    const mengenZeile = document.getElementById("regen-mengen");
-
-    temperaturZeile.innerHTML = "";
-    leiste.innerHTML = "";
-    zeitenZeile.innerHTML = "";
-    mengenZeile.innerHTML = "";
-
-    zeiten.forEach((zeit, i) => {
-      const mm = werte[i] || 0;
-      const hoehe = Math.min(100, (mm / MAX_BALKENHOEHE_MM) * 100);
-
-      const tempLabel = document.createElement("div");
-      tempLabel.textContent = Math.round(temperaturen[i]) + "°";
-      temperaturZeile.appendChild(tempLabel);
-
-      const spalte = document.createElement("div");
-      spalte.className = "regen-balken-spalte";
-      const balken = document.createElement("div");
-      balken.className = "regen-balken" + (mm <= 0 ? " kein-regen" : "");
-      balken.style.height = Math.max(3, hoehe) + "%";
-      spalte.appendChild(balken);
-      leiste.appendChild(spalte);
-
-      const zeitLabel = document.createElement("div");
-      zeitLabel.textContent = new Date(zeit).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
-      zeitenZeile.appendChild(zeitLabel);
-
-      const mengeLabel = document.createElement("div");
-      mengeLabel.textContent = mm > 0 ? mm.toFixed(1) : "–";
-      mengenZeile.appendChild(mengeLabel);
-    });
   }
 
   // --- Ansichten-Umschaltung: rotiert alle 10 Sekunden zwischen Zugtafel
@@ -826,7 +846,12 @@
   setInterval(aktualisiereHervorhebung, 60000); // Verbindungssuche: seltener, schont die API
   setInterval(aktualisiereUhr, 1000);
   setInterval(aktualisiereWetter, 10 * 60000);  // Wetter ändert sich langsam: alle 10 Minuten reicht
-  setInterval(ansichtWechseln, 10000);          // Umschaltung zwischen den Ansichten (je 10s pro Ansicht)
+  setInterval(ansichtWechseln, 7000);           // Umschaltung zwischen den Ansichten (je 7s pro Ansicht)
+
+  // Lädt die Seite regelmässig komplett neu - so holt sich das Handy von
+  // selbst jede neu hochgeladene Version (z.B. via GitHub Pages), ohne dass
+  // man je wieder manuell am Gerät etwas tun muss.
+  setInterval(() => location.reload(), 45 * 60000); // alle 45 Minuten
 </script>
 
 
